@@ -159,15 +159,15 @@ def test_length_bounds_are_the_spec_values():
     assert (MIN_TEXT_LEN, MAX_TEXT_LEN) == (200, 8000)
 
 
-def test_structured_rows_get_the_lower_floor():
-    # A complete short control (IR-5, "Track and document incidents.") must not
-    # be treated as PDF furniture.
-    assert min_text_len("control") == MIN_TEXT_LEN_STRUCTURED
-    assert min_text_len("assessment_objective") == MIN_TEXT_LEN_STRUCTURED
-    assert min_text_len("baseline") == MIN_TEXT_LEN_STRUCTURED
+def test_identifier_keyed_rows_get_the_lower_floor():
+    # A complete short unit — IR-5 ("Track and document incidents."), GOVERN 1.1,
+    # PO.1.1, a one-line glossary term — must not be treated as PDF furniture.
+    for chunk_type in ("control", "control_enhancement", "assessment_objective",
+                       "baseline", "ai_rmf_subcategory", "ssdf_practice", "definition"):
+        assert min_text_len(chunk_type) == MIN_TEXT_LEN_STRUCTURED, chunk_type
 
 
-def test_pdf_derived_rows_keep_the_full_floor():
-    for chunk_type in ("section", "task", "definition", "table",
-                       "ai_rmf_subcategory", "ssdf_practice"):
-        assert min_text_len(chunk_type) == MIN_TEXT_LEN
+def test_layout_derived_rows_keep_the_full_floor():
+    # A short section really is a layout accident, so the furniture floor holds.
+    for chunk_type in ("section", "task", "table"):
+        assert min_text_len(chunk_type) == MIN_TEXT_LEN, chunk_type

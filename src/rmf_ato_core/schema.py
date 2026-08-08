@@ -60,10 +60,11 @@ MIN_TEXT_LEN = 200
 # (Maintainer decision, M2 checkpoint 2026-08-08.)
 MIN_TEXT_LEN_STRUCTURED = 80
 
-# Only the OSCAL-derived types. PDF-derived per-unit rows (ai_rmf_subcategory,
-# ssdf_practice) are deliberately NOT here: they come from layout analysis, so a
-# short one may well be a broken extraction. Revisit at the M3 checkpoint with
-# real numbers rather than assuming.
+# Every identifier-keyed type: a row here is one named unit of the source
+# (control AC-2, subcategory GOVERN 1.1, practice PO.1.1, glossary term), so
+# short text means complete text, not broken extraction. `section` is excluded
+# because a short section really is a layout accident.
+# (Maintainer decision, M3 checkpoint 2026-08-08, on measured counts.)
 STRUCTURED_CHUNK_TYPES: frozenset[str] = frozenset({
     "control",
     "control_enhancement",
@@ -71,6 +72,9 @@ STRUCTURED_CHUNK_TYPES: frozenset[str] = frozenset({
     "assessment_objective",
     "assessment_method",
     "baseline",
+    "ai_rmf_subcategory",
+    "ssdf_practice",
+    "definition",
 })
 
 
