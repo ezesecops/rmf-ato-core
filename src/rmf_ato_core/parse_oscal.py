@@ -208,6 +208,19 @@ def display_id(control_id: str) -> str:
     return f"{printed}({enhancement})" if enhancement else printed
 
 
+def control_sort_key(control_id: str) -> tuple[str, int, int]:
+    """Sort control ids the way a practitioner reads them: AC-2 before AC-11.
+
+    Plain string sort puts AC-11 ahead of AC-2 and SR-10 ahead of SR-2, which
+    makes a baseline list look wrong to anyone who knows the catalog.
+    """
+    match = re.match(r"^([a-z]+)-(\d+)(?:\.(\d+))?$", control_id)
+    if not match:
+        return (control_id, 0, 0)
+    family, number, enhancement = match.groups()
+    return (family, int(number), int(enhancement) if enhancement else 0)
+
+
 def is_withdrawn(control: dict[str, Any]) -> bool:
     return any(
         prop.get("name") == "status" and prop.get("value") == "withdrawn"
@@ -446,7 +459,7 @@ def parse_profile(profile_path: Path, doc: Document, sha256_source: str) -> list
         for include in import_entry.get("include-controls", []):
             control_ids.extend(include.get("with-ids", []))
 
-    unique_ids = sorted(set(control_ids))
+    unique_ids = sorted(set(control_ids), key=control_sort_key)
     baseline_name = doc.doc_id.rsplit("-", 1)[-1]
     enhancements = [cid for cid in unique_ids if "." in cid]
     base_controls = [cid for cid in unique_ids if "." not in cid]

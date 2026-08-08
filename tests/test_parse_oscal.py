@@ -12,6 +12,7 @@ from rmf_ato_core.manifest import Document
 from rmf_ato_core.parse_oscal import (
     ASSESSMENT_DOC_ID,
     build_param_index,
+    control_sort_key,
     display_id,
     parse_catalog,
     parse_profile,
@@ -202,6 +203,13 @@ def test_display_id_matches_nist_printed_form():
 
 
 # --- baselines ---------------------------------------------------------------
+
+def test_control_ids_sort_the_way_a_practitioner_reads_them():
+    ids = ["ac-11", "ac-2", "sr-10", "sr-2", "ac-2.3", "ac-2.10"]
+    assert sorted(ids, key=control_sort_key) == [
+        "ac-2", "ac-2.3", "ac-2.10", "ac-11", "sr-2", "sr-10",
+    ]
+
 
 def test_baseline_row_lists_controls_and_carries_no_control_id():
     doc = make_doc("SP-800-53B-MODERATE")
