@@ -77,7 +77,9 @@ def test_numbered_headings_carry_their_depth():
 def test_keyword_headings():
     assert heading_level(line("CHAPTER THREE"), BODY) == 1
     assert heading_level(line("APPENDIX A TERMS AND DEFINITIONS"), BODY) == 1
-    assert heading_level(line("TASK P-1   Identify and assign individuals"), BODY) == 1
+    # A task nests inside its chapter rather than replacing it, so that
+    # section_path keeps the chapter trail.
+    assert heading_level(line("TASK P-1   Identify and assign individuals"), BODY) == 3
 
 
 def test_footnotes_are_not_headings():

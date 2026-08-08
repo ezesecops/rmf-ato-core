@@ -169,6 +169,9 @@ KEYWORD_HEADING_RE = re.compile(
     r"^(CHAPTER|APPENDIX|ANNEX|SECTION|TASK)\s+([A-Z0-9][-A-Z0-9.]*)\s*:?\s*(.*)$",
     re.IGNORECASE,
 )
+# A task sits inside a chapter, so it must not reset the heading trail the way
+# a chapter does — otherwise every task row loses its chapter in section_path.
+KEYWORD_HEADING_LEVELS = {"chapter": 1, "section": 1, "appendix": 1, "annex": 1, "task": 3}
 LETTERED_APPENDIX_RE = re.compile(r"^([A-Z](?:\.\d+)+)\s+(\S.*)$")
 
 
@@ -203,7 +206,7 @@ def heading_level(line: Line, body_size: float) -> int | None:
         return match.group(1).count(".") + 1
 
     if keyword_match:
-        return 1
+        return KEYWORD_HEADING_LEVELS.get(keyword_match.group(1).lower(), 1)
 
     match = LETTERED_APPENDIX_RE.match(text)
     if match:
@@ -337,11 +340,36 @@ def find_body_start_page(
         text = line.text.strip()
         if line.page in contents_pages or heading_level(line, body_size) != 1:
             continue
-        if NUMBERED_HEADING_RE.match(text) or re.match(
+        numbered = NUMBERED_HEADING_RE.match(text)
+        # Only the *first* numbered section counts. Any numbered line would do
+        # otherwise, and a stray one in the front matter (SP 800-218 has one on
+        # page 3) leaves the address block and trademark notice looking like
+        # body content, which then pollutes every section_path beneath them.
+        if (numbered and numbered.group(1) == "1") or re.match(
             r"^(CHAPTER|SECTION)\s", text, re.IGNORECASE
         ):
-            return line.page
+            candidate = line.page
+            # Front matter is never a third of a publication. SP 800-218 sets
+            # its numbered headings across two lines ("1" then "Introduction"),
+            # so no line ever matches and detection would otherwise land deep in
+            # the body and delete most of the document.
+            page_count = max((l.page for l in lines), default=1)
+            return candidate if candidate <= max(3, page_count * 0.33) else 1
     return 1
+
+
+# Front-matter headings that must never appear as an ancestor in section_path,
+# whether or not the front-matter drop caught the section they head.
+FRONT_MATTER_HEADING_RE = re.compile(
+    r"(gaithersburg|submit comments|trademark|patent disclosure|"
+    r"^abstract$|^keywords$|^acknowledg|^disclaimer|^audience$|"
+    r"bureau drive|attn:|^certain commercial)",
+    re.IGNORECASE,
+)
+
+
+def clean_trail(trail: list[str]) -> list[str]:
+    return [head for head in trail if not FRONT_MATTER_HEADING_RE.search(head)]
 
 
 def drop_front_matter(
@@ -420,7 +448,9 @@ def emit_sections(
                 detail=f"{len(text.strip())} chars on page {section.page}",
             )
             continue
-        path = " > ".join(clean_heading(part) for part in [*section.trail, section.heading] if part)
+        path = " > ".join(
+            clean_heading(part) for part in [*clean_trail(section.trail), section.heading] if part
+        )
         rows.append(builder.row(chunk_type, section_slug(section), text, path))
     return rows
 
@@ -449,7 +479,9 @@ def extract_definitions(builder: PdfRowBuilder, section: Section) -> list[Row]:
     rows: list[Row] = []
     current_term: str | None = None
     current_body: list[str] = []
-    path = " > ".join(clean_heading(part) for part in [*section.trail, section.heading] if part)
+    path = " > ".join(
+        clean_heading(part) for part in [*clean_trail(section.trail), section.heading] if part
+    )
 
     def flush() -> None:
         if current_term is None:
@@ -635,11 +667,16 @@ def join_lines(texts: list[str], vocabulary: set[str] | None = None) -> str:
 
 @dataclass
 class Block:
-    key: str
+    key: str                  # slug source for the row id
     heading: str
     path: str
     page: int
     lines: list[str] = field(default_factory=list)
+    label: str = ""           # how the block is named in section_path
+
+    def __post_init__(self) -> None:
+        if not self.label:
+            self.label = self.key
 
 
 def extract_blocks(
@@ -664,13 +701,20 @@ def extract_blocks(
         # deeper than max_span_level are absorbed, major ones close the block.
         if section.level <= max_span_level:
             current = None
-        path = " > ".join(clean_heading(part) for part in [*section.trail, section.heading] if part)
-        for line in [Line(section.heading, section.page, 0, False, 0), *section.lines]:
+        trail_path = " > ".join(clean_heading(part) for part in clean_trail(section.trail) if part)
+        full_path = " > ".join(
+            part for part in [trail_path, clean_heading(section.heading)] if part
+        )
+        heading_line = Line(section.heading, section.page, 0, False, 0)
+        for line in [heading_line, *section.lines]:
             text = line.text.strip()
             if not text:
                 continue
             match = pattern.match(text)
             if match:
+                # An identifier found on the section heading itself would
+                # otherwise repeat in the path.
+                path = trail_path if line is heading_line else full_path
                 current = Block(key=match.group(1), heading=text, path=path, page=line.page)
                 blocks.append(current)
                 continue
@@ -712,7 +756,7 @@ def emit_blocks(
                 detail=f"{len(text)} chars on page {block.page}",
             )
             continue
-        path = f"{block.path} > {block.key}" if block.path else block.key
+        path = f"{block.path} > {block.label}" if block.path else block.label
         rows.append(builder.row(chunk_type, block.key, text, path))
     return rows
 
@@ -735,6 +779,8 @@ def handle_sp_800_37r2(
             ref=block.key, rule="duplicate_task_stub",
             detail=f"shorter duplicate of {block.key} on page {block.page} (summary table or contents)",
         )
+    for block in kept:
+        block.label = f"TASK {block.key}"
     rows = emit_blocks(builder, sorted(kept, key=lambda b: (b.key[0], int(b.key.split("-")[1]))),
                        "task", min_chars=200)
 
@@ -829,6 +875,15 @@ def handle_ssdf(
     for block in discarded:
         builder.reject(ref=block.key, rule="duplicate_practice_stub",
                        detail=f"shorter duplicate of {block.key} on page {block.page}")
+    # The SSDF's own identifier carries its hierarchy (PO.1.1 sits under
+    # practice PO.1 in group PO), which is more reliable than the heading trail
+    # in a document laid out almost entirely as wide tables.
+    for block in kept:
+        parts = block.key.split(".")
+        block.path = " > ".join(
+            ["SSDF Practices", parts[0], ".".join(parts[:2])][: len(parts) + 1]
+        )
+        block.label = block.key
     rows = emit_blocks(builder, kept, "ssdf_practice", vocabulary, min_chars=60)
 
     practice_pages = {block.page for block in kept}
