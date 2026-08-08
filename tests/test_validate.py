@@ -10,7 +10,12 @@ import pytest
 
 from rmf_ato_core.fetch import ProvenanceEntry
 from rmf_ato_core.manifest import load_manifest
-from rmf_ato_core.validate import check_expected_counts, summary_markdown, validate_rows
+from rmf_ato_core.chunk import chunk_rows
+from rmf_ato_core.validate import (
+    check_expected_counts,
+    summary_markdown,
+    validate_rows,
+)
 from tests.test_schema import make_row
 
 MANIFEST = load_manifest(Path(__file__).resolve().parent.parent / "manifest.json")
@@ -137,14 +142,15 @@ def test_furniture_text_is_rejected():
     assert rules(run(boilerplate)) == ["no_furniture"]
 
 
-# --- rule 8: bibliography_entry ---------------------------------------------
+# --- rule 9: bibliography_entry ---------------------------------------------
 
 @pytest.mark.parametrize(
     "text",
     [
-        "[FIPS 199] Standards for Security Categorization of Federal Information "
-        "and Information Systems, February 2004. " + "A" * 200,
-        "[OMB A-130] Managing Information as a Strategic Resource. " + "A" * 200,
+        "[44USC3502] Title 44 U.S. Code, Sec. 3502, Definitions. 2017 ed. Available at "
+        "https://www.govinfo.gov/app/details/USCODE. " + "A" * 200,
+        "[EO14028] Executive Order 14028 (2021) Improving the Nation's Cybersecurity. "
+        "(The White House, Washington, DC). " + "A" * 200,
         'Ross, R. (2018). "Risk Management Framework for Information Systems." ' + "A" * 200,
     ],
 )
@@ -152,6 +158,18 @@ def test_reference_list_entries_are_rejected(text):
     row = good_row(id="FIPS-199/section/appendix-b-references", doc_id="FIPS-199",
                    chunk_type="section", control_id=None, sha256_source="b" * 64, text=text)
     assert rules(run(row)) == ["bibliography_entry"]
+
+
+def test_guidance_behind_a_citation_tag_is_not_a_bibliography_entry():
+    # "[SP800-37] • Disposal: The system is no longer authorized…" is guidance
+    # wearing a tag; Stage 5 strips the tag and the row is published.
+    row = good_row(
+        id="SP-800-18r2/section/disposal", doc_id="SP-800-18r2", chunk_type="section",
+        control_id=None, sha256_source="b" * 64,
+        text="[SP800-37] Disposal: The system is no longer authorized or operational. "
+             "Organizations may use other operational statuses as needed. " + "A" * 200,
+    )
+    assert not run(row).rejections
 
 
 def test_a_bracketed_citation_inside_a_definition_is_not_a_bibliography_entry():
@@ -165,34 +183,52 @@ def test_a_bracketed_citation_inside_a_definition_is_not_a_bibliography_entry():
     assert not run(row).rejections
 
 
-# --- rule 9: running_header_fragment ----------------------------------------
+# --- rule 5: running_header_fragment ----------------------------------------
 
-def test_running_header_remnants_are_rejected():
+def test_a_row_that_is_only_a_running_header_is_rejected():
     row = good_row(
         id="SP-800-37r2/section/appendix-b", doc_id="SP-800-37r2", chunk_type="section",
         control_id=None, sha256_source="b" * 64,
-        text="APPENDIX B PAGE 91 " + "A" * 300,
+        text="APPENDIX B PAGE B-2",
     )
     assert rules(run(row)) == ["running_header_fragment"]
 
 
-def test_chapter_page_remnants_are_rejected_via_section_path():
-    row = good_row(
-        id="SP-800-37r2/section/x", doc_id="SP-800-37r2", chunk_type="section",
+def test_a_running_header_over_substantive_body_is_kept_and_stripped():
+    # Stage 5 does the stripping; validation must not reject what it produced.
+    raw = good_row(
+        id="SP-800-137/definition/allocation", doc_id="SP-800-137", chunk_type="definition",
         control_id=None, sha256_source="b" * 64,
-        section_path="CHAPTER THREE PAGE 29 > something",
+        text="APPENDIX B PAGE B-2 Allocation: The process an organization employs to "
+             "determine whether security controls are defined as system-specific, "
+             "hybrid, or common. " + "A" * 100,
+    )
+    cleaned, _ = chunk_rows([raw])
+    assert len(cleaned) == 1
+    assert cleaned[0].text.startswith("Allocation:")
+    assert not run(cleaned[0]).rejections
+
+
+def test_single_character_path_segments_alone_do_not_reject_substantive_rows():
+    # Drop caps are no longer headings, but a stale single-letter path segment
+    # must not throw away a row that still has real content.
+    row = good_row(
+        id="SP-800-137/section/x", doc_id="SP-800-137", chunk_type="section",
+        control_id=None, sha256_source="b" * 64,
+        section_path="CHAPTER TWO > T",
+        text="ISCM is a tactic in a larger strategy of organization-wide risk "
+             "management. " + "A" * 300,
+    )
+    assert not run(row).rejections
+
+
+def test_a_single_character_path_segment_with_no_body_is_rejected():
+    row = good_row(
+        id="SP-800-137/section/t", doc_id="SP-800-137", chunk_type="section",
+        control_id=None, sha256_source="b" * 64,
+        section_path="CHAPTER TWO > T", text="T",
     )
     assert rules(run(row)) == ["running_header_fragment"]
-
-
-def test_single_character_path_segments_are_rejected():
-    for path in ("B", "APPENDIX B > E > Something", "D > Tail"):
-        row = good_row(
-            id=f"SP-800-60v2r1/section/{path[:1].lower()}", doc_id="SP-800-60v2r1",
-            chunk_type="section", control_id=None, sha256_source="b" * 64,
-            section_path=path,
-        )
-        assert rules(run(row)) == ["running_header_fragment"], path
 
 
 def test_a_real_path_with_short_but_multi_character_segments_survives():

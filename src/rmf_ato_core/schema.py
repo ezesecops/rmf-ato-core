@@ -138,6 +138,52 @@ _CHAR_FIXES = {
 }
 
 
+# --- furniture that survives extraction --------------------------------------
+
+# A running-header remnant carried into the body: "APPENDIX B PAGE B-2 …" or
+# "CHAPTER THREE PAGE 29 …". Whitespace here spans newlines on purpose, because
+# the remnant arrives as its own lines.
+RUNNING_HEADER_PREFIX_RE = re.compile(
+    r"^(?:(?:APPENDIX|CHAPTER)\s+[A-Za-z0-9-]{1,10}\s+)(?:PAGE\s+[A-Za-z0-9-]{1,10}\s+)?",
+    re.IGNORECASE,
+)
+
+# A leading citation tag: "[NISTIR 7298] ", "[SP800-53] ".
+REFERENCE_TAG_RE = re.compile(r"^\[[A-Z0-9][A-Za-z0-9 .\-]{0,40}\]\s*")
+
+# What makes the text *after* a tag a reference entry rather than guidance:
+# the apparatus of a citation.
+_CITATION_MARKERS_RE = re.compile(
+    r"(available at|https?://|\(\d{4}\)|\bU\.S\. Code\b|\bed\.\b|\bpp\.\s*\d|\bvol\.\s*\d)",
+    re.IGNORECASE,
+)
+
+# "Ross, R. (2018)." / "Smith, J. \"Title\"" — a bibliography line with no tag.
+AUTHOR_YEAR_RE = re.compile(
+    r"^[A-Z][A-Za-z'’\-]+,\s+[A-Z]\.(\s*[A-Z]\.)*[,\s]+(\(\d{4}\)|[\"“])"
+)
+
+
+def strip_running_header(text: str) -> str:
+    """Remove a leading running-header remnant. Returns the text unchanged if
+    there is none."""
+    return RUNNING_HEADER_PREFIX_RE.sub("", text or "", count=1).lstrip()
+
+
+def strip_reference_tag(text: str) -> str:
+    """Remove a leading citation tag, keeping the guidance that follows it."""
+    return REFERENCE_TAG_RE.sub("", text or "", count=1).lstrip()
+
+
+def is_reference_entry(text: str) -> bool:
+    """True when the row *is* a reference-list entry, not guidance that merely
+    opens with a citation tag."""
+    tagged = REFERENCE_TAG_RE.match(text or "")
+    if tagged:
+        return bool(_CITATION_MARKERS_RE.search(text[tagged.end():][:300]))
+    return bool(AUTHOR_YEAR_RE.match(text or ""))
+
+
 def normalize_text(text: str) -> str:
     """Collapse whitespace, drop control chars, keep paragraph breaks as \\n\\n."""
     for bad, good in _CHAR_FIXES.items():

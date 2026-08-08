@@ -193,6 +193,12 @@ def heading_level(line: Line, body_size: float) -> int | None:
     if not text or len(text) > 160:
         return None
 
+    # A single character is never a heading. NIST chapters open with a large
+    # decorative drop cap, which is set bigger than any real heading and would
+    # otherwise split the chapter and leave a one-letter section_path segment.
+    if len(text) == 1:
+        return None
+
     keyword_match = KEYWORD_HEADING_RE.match(text)
     # A line that ends like a sentence is prose, however it starts.
     if text.endswith((".", ";")) and not text.isupper() and not keyword_match:
@@ -805,7 +811,41 @@ def find_appendix_span(
     return (start, max(line.page for line in lines))
 
 
-def extract_bold_term_definitions(
+# A source line opens with a bracket and is set smaller than the body. The
+# closing bracket may be on the next line ("[OMB Circular A-130," / "Appendix
+# III]"), so only the opening is required.
+SOURCE_LINE_RE = re.compile(r"^\[[^\]]{2,}")
+
+# A bare running-header line inside an appendix: "APPENDIX B", "PAGE B-2".
+HEADER_ONLY_LINE_RE = re.compile(r"^(APPENDIX|CHAPTER|PAGE)\s+[A-Za-z0-9-]{1,10}$", re.IGNORECASE)
+
+
+def _starts_a_term(
+    line: Line, next_line: Line | None, body_size: float
+) -> bool:
+    """Whether this line opens a new glossary entry.
+
+    Two publications, two typographic conventions for the same structure:
+    SP 800-37 sets its terms in bold, while SP 800-137 sets them in the body
+    face and marks each entry with a smaller `[SOURCE]` line underneath. Both
+    are font signals, because neither glossary punctuates its terms.
+    """
+    text = line.text.strip()
+    if not text or len(text) > 80:
+        return False
+    at_body_size = abs(line.size - body_size) < 0.5
+    if not at_body_size:
+        return False
+    if line.bold:
+        return True
+    return (
+        next_line is not None
+        and next_line.size < body_size - 0.3
+        and SOURCE_LINE_RE.match(next_line.text.strip()) is not None
+    )
+
+
+def extract_term_definitions(
     builder: PdfRowBuilder,
     lines: list[Line],
     body_size: float,
@@ -814,17 +854,21 @@ def extract_bold_term_definitions(
     repeating: set[str],
     contents_pages: frozenset[int],
 ) -> list[Row]:
-    """One row per term for a glossary that marks its terms with bold type.
+    """One row per term for a glossary whose entries are marked by type, not
+    punctuation."""
+    span_lines = [
+        line for line in lines
+        if span[0] <= line.page <= span[1]
+        and line.text.strip()
+        and not is_furniture(line, repeating, contents_pages)
+        # An appendix running header repeats on too few pages to be caught by
+        # frequency, and would otherwise be swept into the next term's name.
+        and not HEADER_ONLY_LINE_RE.match(line.text.strip())
+    ]
 
-    SP 800-37's Appendix B does not use the "TERM: definition" shape the other
-    glossaries use — the term sits alone on a bold line, followed by an optional
-    bracketed source and then the definition — so the font, not punctuation, is
-    what separates entries.
-    """
     rows: list[Row] = []
     current_term: str | None = None
     current_body: list[str] = []
-    start, end = span
 
     def flush() -> None:
         if current_term is None:
@@ -836,30 +880,55 @@ def extract_bold_term_definitions(
             return
         rows.append(builder.row("definition", current_term, text, f"{path} > {current_term}"))
 
-    for line in lines:
-        if not start <= line.page <= end:
-            continue
-        if is_furniture(line, repeating, contents_pages):
-            continue
+    for index, line in enumerate(span_lines):
         text = line.text.strip()
-        if not text:
-            continue
-        # A bold line at body size is a term; the appendix title and its
-        # introduction are set larger and are skipped.
-        if line.bold and abs(line.size - body_size) < 0.5 and len(text) <= 80:
+        next_line = span_lines[index + 1] if index + 1 < len(span_lines) else None
+
+        if _starts_a_term(line, next_line, body_size):
             if current_term is not None and not current_body:
-                # A long term wraps onto a second bold line ("authorizing
-                # official" / "designated representative"); it is one term, not
-                # two, and treating it as two leaves the first with no body.
+                # A long term wraps onto a second line ("authorizing official" /
+                # "designated representative"); it is one term, not two, and
+                # splitting it leaves the first half with no body.
                 current_term = f"{current_term} {text}"
                 continue
+            # When the term is detected by its source line, earlier lines of a
+            # wrapped term are already sitting in the body; pull them back.
+            carried: list[str] = []
+            while (
+                current_body
+                and len(carried) < 2
+                and len(current_body[-1]) <= 60
+                and not current_body[-1].endswith((".", ";", ":"))
+            ):
+                carried.insert(0, current_body.pop())
             flush()
-            current_term = text
+            current_term = " ".join([*carried, text])
             current_body = []
         elif current_term is not None and line.size <= body_size:
             current_body.append(text)
     flush()
     return rows
+
+
+def handle_bold_glossary_document(
+    builder: PdfRowBuilder,
+    lines: list[Line],
+    sections: list[Section],
+    title: str,
+) -> tuple[list[Row], tuple[int, int] | None]:
+    """Extract a type-marked glossary appendix and report its page span so the
+    caller can stop emitting those pages as sections."""
+    body_size, repeating, contents_pages = layout_context(lines)
+    span = find_appendix_span(lines, title, body_size)
+    if span is None:
+        builder.reject(title, "glossary_not_found",
+                       f"no '{title}' appendix title found at title size")
+        return [], None
+    rows = extract_term_definitions(
+        builder, lines, body_size, span,
+        f"APPENDIX > {title}", repeating, contents_pages,
+    )
+    return rows, span
 
 
 def handle_sp_800_37r2(
@@ -878,16 +947,10 @@ def handle_sp_800_37r2(
     rows = emit_blocks(builder, sorted(kept, key=lambda b: (b.key[0], int(b.key.split("-")[1]))),
                        "task", min_chars=200)
 
-    body_size, repeating, contents_pages = layout_context(lines)
-    glossary_span = find_appendix_span(lines, "GLOSSARY", body_size)
-    if glossary_span is None:
-        builder.reject("APPENDIX B", "glossary_not_found",
-                       "no 'GLOSSARY' appendix title found at title size")
-    else:
-        rows.extend(extract_bold_term_definitions(
-            builder, lines, body_size, glossary_span,
-            "APPENDIX B > GLOSSARY", repeating, contents_pages,
-        ))
+    glossary_rows, glossary_span = handle_bold_glossary_document(
+        builder, lines, sections, "GLOSSARY"
+    )
+    rows.extend(glossary_rows)
 
     # Sections that only exist to hold task blocks would duplicate them, and the
     # glossary appendix is now covered term by term.
@@ -1062,6 +1125,23 @@ def handle_sp_800_60v2(
     return rows
 
 
+def handle_sp_800_137(
+    builder: PdfRowBuilder, pdf_path: Path, lines: list[Line], sections: list[Section]
+) -> list[Row]:
+    """Sections, plus Appendix B's glossary as `definition` rows.
+
+    SP 800-137 marks its terms with a smaller `[SOURCE]` line rather than bold
+    type, but the entry structure is the same one SP 800-37 uses.
+    """
+    rows, span = handle_bold_glossary_document(builder, lines, sections, "GLOSSARY")
+    remaining = [
+        section for section in sections
+        if not (span and span[0] <= section.page <= span[1])
+    ]
+    rows.extend(_sections_and_glossary(builder, remaining))
+    return rows
+
+
 def handle_default(
     builder: PdfRowBuilder, pdf_path: Path, lines: list[Line], sections: list[Section]
 ) -> list[Row]:
@@ -1082,6 +1162,7 @@ HANDLERS = {
     "FIPS-200": handle_fips_200,
     "SP-800-37r2": handle_sp_800_37r2,
     "SP-800-60v2r1": handle_sp_800_60v2,
+    "SP-800-137": handle_sp_800_137,
     "AI-100-1": handle_ai_100_1,
     "SP-800-218": handle_ssdf,
     "SP-800-218A": handle_ssdf,

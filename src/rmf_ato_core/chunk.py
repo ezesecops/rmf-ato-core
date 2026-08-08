@@ -16,7 +16,15 @@ import re
 from dataclasses import replace
 
 from .parse_oscal import Rejection
-from .schema import MAX_TEXT_LEN, Row, min_text_len, normalize_text
+from .schema import (
+    MAX_TEXT_LEN,
+    Row,
+    is_reference_entry,
+    min_text_len,
+    normalize_text,
+    strip_reference_tag,
+    strip_running_header,
+)
 
 # Parts are cut to this, below the hard ceiling, so that adding the overlap
 # paragraph cannot push a part back over the limit.
@@ -180,10 +188,44 @@ def _trailing(row: Row) -> Rejection:
     )
 
 
+def strip_leading_furniture(row: Row) -> Row:
+    """Remove a running-header remnant or a leading citation tag from a row that
+    has real content underneath it.
+
+    A row is only cleaned when what remains is still substantive. A row that is
+    *nothing but* furniture, or that is genuinely a reference-list entry, is
+    left exactly as it is so that Stage 6 can reject it under the rule that
+    names the problem rather than a generic length failure.
+    """
+    floor = min_text_len(row.chunk_type)
+    text = row.text
+
+    cleaned = strip_running_header(text)
+    if cleaned != text and len(cleaned) >= floor:
+        text = cleaned
+
+    if not is_reference_entry(text):
+        untagged = strip_reference_tag(text)
+        if untagged != text and len(untagged) >= floor:
+            text = untagged
+
+    if text == row.text:
+        return row
+
+    section_path = row.section_path
+    if section_path:
+        # Removing a leading segment leaves its separator behind.
+        stripped_path = strip_running_header(section_path).lstrip("> ").strip()
+        section_path = stripped_path or section_path
+
+    return replace(row, text=text, section_path=section_path)
+
+
 def chunk_rows(rows: list[Row]) -> tuple[list[Row], list[Rejection]]:
-    """Run the whole stage: normalize, merge stubs, split oversized rows."""
+    """Run the whole stage: normalize, strip furniture, merge stubs, split."""
     normalized = [
-        replace(row, text=normalize_text(row.text)) for row in rows
+        strip_leading_furniture(replace(row, text=normalize_text(row.text)))
+        for row in rows
     ]
     merged, rejections = merge_short_sections(normalized)
 

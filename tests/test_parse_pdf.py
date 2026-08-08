@@ -14,6 +14,8 @@ import pytest
 
 from rmf_ato_core.parse_pdf import (
     Line,
+    _starts_a_term,
+    extract_term_definitions,
     PdfRowBuilder,
     Section,
     build_sections,
@@ -291,3 +293,65 @@ def test_playbook_records_become_subcategory_rows(tmp_path):
     assert {r.rule for r in rejections} == {
         "missing_title", "duplicate_subcategory", "playbook_entry_too_short",
     }
+
+
+# --- drop caps ---------------------------------------------------------------
+
+def test_a_single_character_line_is_never_a_heading():
+    # NIST chapters open with a large decorative drop cap, set bigger than any
+    # real heading; as a heading it split the chapter and left a one-letter
+    # section_path segment.
+    assert heading_level(line("O", size=47.5), BODY) is None
+    assert heading_level(line("T", size=47.5, bold=True), BODY) is None
+    # Two characters can still be a heading.
+    assert heading_level(line("AC", size=BODY + 2), BODY) == 2
+
+
+def test_a_drop_cap_becomes_body_text_of_its_chapter():
+    lines = [
+        line("CHAPTER TWO"),
+        line("O", size=47.5),
+        line("rganizations can make effective use of their security budgets."),
+    ]
+    sections = build_sections(lines, BODY, set())
+    assert [s.path for s in sections] == ["CHAPTER TWO"]
+    assert "rganizations can make" in sections[0].body
+
+
+# --- glossary term detection -------------------------------------------------
+
+def test_a_bold_line_at_body_size_starts_a_term():
+    # SP 800-37's convention.
+    assert _starts_a_term(line("assurance", bold=True), line("Grounds for confidence."), BODY)
+    assert not _starts_a_term(line("Grounds for confidence."), None, BODY)
+
+
+def test_a_line_followed_by_a_smaller_source_line_starts_a_term():
+    # SP 800-137's convention: terms are not bold, but each entry is marked by a
+    # smaller "[SOURCE]" line beneath it.
+    assert _starts_a_term(line("Allocation"), line("[NISTIR 7298]", size=BODY - 1.2), BODY)
+    # The same line without the source beneath it is just prose.
+    assert not _starts_a_term(line("Allocation"), line("more prose here"), BODY)
+    # A source line at body size is not a source marker.
+    assert not _starts_a_term(line("Allocation"), line("[NISTIR 7298]"), BODY)
+
+
+def test_glossary_extraction_handles_both_conventions():
+    lines = [
+        # SP 800-137 shape: term, smaller source, definition.
+        line("Allocation", page=2),
+        line("[NISTIR 7298]", page=2, size=BODY - 1.2),
+        line("The process an organization employs to determine whether security "
+             "controls are defined as system-specific, hybrid, or common.", page=2),
+        # SP 800-37 shape: bold term, definition.
+        line("audit trail", page=2, bold=True),
+        line("A chronological record that reconstructs and examines the sequence "
+             "of activities surrounding a security-relevant transaction.", page=2),
+    ]
+    builder = PdfRowBuilder(make_doc("SP-800-137", fmt="pdf"), "a" * 64)
+    rows = extract_term_definitions(builder, lines, BODY, (1, 3), "APPENDIX > GLOSSARY",
+                                    set(), frozenset())
+    assert [r.id.rsplit("/", 1)[-1] for r in rows] == ["allocation", "audit-trail"]
+    assert rows[0].text.startswith("Allocation: [NISTIR 7298] The process")
+    assert all(r.chunk_type == "definition" for r in rows)
+    assert all(r.control_id is None for r in rows)

@@ -145,3 +145,59 @@ def test_chunking_preserves_provenance_fields():
         assert part.doc_id == row.doc_id
         assert part.source_url == row.source_url
         assert part.chunk_type == row.chunk_type
+
+
+# --- leading furniture -------------------------------------------------------
+
+from rmf_ato_core.chunk import strip_leading_furniture  # noqa: E402
+
+
+def test_a_running_header_over_real_content_is_stripped_not_dropped():
+    row = section(
+        "APPENDIX B PAGE B-2 Allocation: The process an organization employs to "
+        "determine whether security controls are defined as system-specific, "
+        "hybrid, or common. " + "A" * 200
+    )
+    cleaned = strip_leading_furniture(row)
+    assert cleaned.text.startswith("Allocation: The process")
+    assert len(cleaned.text) == len(row.text) - len("APPENDIX B PAGE B-2 ")
+
+
+def test_a_row_that_is_only_a_running_header_is_left_for_validation():
+    # Stripping it would leave nothing, so it keeps its shape and Stage 6
+    # rejects it under the rule that names the problem.
+    row = section("APPENDIX B PAGE B-2")
+    assert strip_leading_furniture(row) == row
+
+
+def test_a_running_header_is_stripped_from_section_path_too():
+    row = replace(
+        section("CHAPTER THREE PAGE 29 Real content follows here. " + "A" * 300),
+        section_path="CHAPTER THREE PAGE 29 > Risk Management Roles",
+    )
+    cleaned = strip_leading_furniture(row)
+    assert cleaned.section_path == "Risk Management Roles"
+
+
+def test_a_citation_tag_over_guidance_is_stripped():
+    row = section(
+        "[SP800-37] Disposal: The system is no longer authorized or operational. "
+        "Organizations may use other operational statuses as needed. " + "A" * 200
+    )
+    cleaned = strip_leading_furniture(row)
+    assert cleaned.text.startswith("Disposal: The system")
+
+
+def test_a_real_reference_entry_keeps_its_tag_for_rejection():
+    row = section(
+        "[44USC3502] Title 44 U.S. Code, Sec. 3502, Definitions. 2017 ed. "
+        "Available at https://www.govinfo.gov/app/details/USCODE. " + "A" * 200
+    )
+    assert strip_leading_furniture(row) == row
+
+
+def test_stripping_never_pushes_a_row_below_its_floor():
+    # Removing the tag would leave 30 chars, under the section floor, so the
+    # row is left intact rather than quietly mangled.
+    row = section("[NISTIR 7298] " + "A" * 30)
+    assert strip_leading_furniture(row) == row

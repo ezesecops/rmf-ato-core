@@ -21,8 +21,11 @@ from .schema import (
     CONTROL_ID_RE,
     FIELD_ORDER,
     MAX_TEXT_LEN,
+    RUNNING_HEADER_PREFIX_RE,
     Row,
+    is_reference_entry,
     min_text_len,
+    strip_running_header,
 )
 
 # Formats whose rows may legitimately carry a control_id: the catalog itself and
@@ -37,19 +40,8 @@ FURNITURE_PATTERNS = (
     re.compile(r"this publication is available free of charge", re.IGNORECASE),
 )
 
-# A reference-list entry: "[FIPS 199] Standards for…" or "Smith, J. (2004)…".
-# These carry no guidance — they are pointers to other documents — and they
-# retrieve badly because they are mostly titles and numbers.
-BIBLIOGRAPHY_PATTERNS = (
-    re.compile(r"^\[[A-Z0-9][A-Z0-9 .\-]{0,40}\]\s"),
-    re.compile(r"^[A-Z][A-Za-z'’\-]+,\s+[A-Z]\.(\s*[A-Z]\.)*[,\s]+(\(\d{4}\)|[\"“])"),
-)
-
-# The remnant of a running header that survived furniture stripping, e.g. a row
-# opening "APPENDIX B PAGE 91" or a path segment that is a single letter.
-RUNNING_HEADER_PATTERNS = (
-    re.compile(r"^\s*(CHAPTER\s+\w+|APPENDIX\s+[A-Z])\b[\s\W]{0,8}PAGE\b", re.IGNORECASE),
-)
+# A path segment that is a single character — the trace of a decorative drop
+# cap that was mistaken for a heading.
 SINGLE_CHAR_SEGMENT_RE = re.compile(r"(?:^|\s>\s)[A-Za-z0-9](?:\s>\s|$)")
 
 # A section that begins mid-sentence lost its opening to a page break or a
@@ -142,38 +134,43 @@ def validate_rows(
                    f"control_id present but {row.doc_id} is format {document.format!r}, not OSCAL")
             continue
 
-        # 5. length_bounds
+        # 5. running_header_fragment — checked before the length rule so that a
+        # row which is nothing but a running header is reported as the furniture
+        # it is, rather than as a generic length failure. Rows that had a
+        # remnant over real content were stripped in Stage 5 and never reach
+        # this branch.
         floor = min_text_len(row.chunk_type)
+        has_remnant = RUNNING_HEADER_PREFIX_RE.match(row.text) is not None
+        has_single_char_segment = SINGLE_CHAR_SEGMENT_RE.search(row.section_path or "") is not None
+        if has_remnant or has_single_char_segment:
+            if len(strip_running_header(row.text)) < floor:
+                reject(row, "running_header_fragment",
+                       "no substantive body under the running-header remnant")
+                continue
+
+        # 6. length_bounds
         if not floor <= len(row.text) <= MAX_TEXT_LEN:
             reject(row, "length_bounds",
                    f"{len(row.text)} chars outside [{floor}, {MAX_TEXT_LEN}] for {row.chunk_type}")
             continue
 
-        # 6. no_template_residue
+        # 7. no_template_residue
         residue = [marker for marker in TEMPLATE_RESIDUE if marker in row.text]
         if residue:
             reject(row, "no_template_residue", f"text contains {residue}")
             continue
 
-        # 7. no_furniture
+        # 8. no_furniture
         if any(pattern.search(row.text) for pattern in FURNITURE_PATTERNS):
             reject(row, "no_furniture", "text matches a header/footer/page-number pattern")
             continue
 
-        # 8. bibliography_entry
-        if any(pattern.match(row.text) for pattern in BIBLIOGRAPHY_PATTERNS):
-            reject(row, "bibliography_entry", "text is a reference-list entry, not guidance")
-            continue
-
-        # 9. running_header_fragment
-        header_hit = any(
-            pattern.match(candidate)
-            for pattern in RUNNING_HEADER_PATTERNS
-            for candidate in (row.text, row.section_path or "")
-        )
-        if header_hit or SINGLE_CHAR_SEGMENT_RE.search(row.section_path or ""):
-            reject(row, "running_header_fragment",
-                   "text or section_path is a running-header remnant")
+        # 9. bibliography_entry — a reference-list entry, not guidance that
+        # merely opens with a citation tag; those had the tag stripped in
+        # Stage 5 and keep their content.
+        if is_reference_entry(row.text):
+            reject(row, "bibliography_entry",
+                   "text is a reference-list entry (citation apparatus, no guidance)")
             continue
 
         # 10. midsentence_fragment
