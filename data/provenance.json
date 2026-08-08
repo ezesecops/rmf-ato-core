@@ -1,0 +1,202 @@
+{
+  "AI-100-1": {
+    "sha256": "7576edb531d9848825814ee88e28b1795d3a84b435b4b797d3670eafdc4a89f1",
+    "bytes": 1946127,
+    "retrieved_at": "2026-08-08T21:37:28+00:00",
+    "url": "https://nvlpubs.nist.gov/nistpubs/ai/NIST.AI.100-1.pdf",
+    "http_status": 200,
+    "source": "download",
+    "skipped": false,
+    "note": ""
+  },
+  "AI-RMF-PLAYBOOK": {
+    "sha256": "aecbee3d3c8820816d295b11d10fb61324b17c25c2ff39ee95e2aa5654555bba",
+    "bytes": 413720,
+    "retrieved_at": "2026-08-08T21:38:49+00:00",
+    "url": "https://airc.nist.gov/docs/playbook.json",
+    "http_status": 200,
+    "source": "download",
+    "skipped": false,
+    "note": ""
+  },
+  "CNSSI-1253": {
+    "sha256": null,
+    "bytes": null,
+    "retrieved_at": null,
+    "url": "https://www.cnss.gov/CNSS/issuances/Instructions.cfm",
+    "http_status": null,
+    "source": "manual",
+    "skipped": true,
+    "note": "awaiting manual placement"
+  },
+  "DoDI-8510.01": {
+    "sha256": null,
+    "bytes": null,
+    "retrieved_at": null,
+    "url": "https://www.esd.whs.mil/DD/DoD-Issuances/",
+    "http_status": null,
+    "source": "manual",
+    "skipped": true,
+    "note": "awaiting manual placement"
+  },
+  "FIPS-199": {
+    "sha256": "73d19f05f71e30f378050f178aa3943c38790bbae56c07f2b5708c5a1a90242f",
+    "bytes": 80356,
+    "retrieved_at": "2026-08-08T21:37:11+00:00",
+    "url": "https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.199.pdf",
+    "http_status": 200,
+    "source": "download",
+    "skipped": false,
+    "note": ""
+  },
+  "FIPS-200": {
+    "sha256": "107a9b9cdc8eccf37386aec28bbaf2dfaef5cfece17151ceabc3960423243a57",
+    "bytes": 218892,
+    "retrieved_at": "2026-08-08T21:37:13+00:00",
+    "url": "https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.200.pdf",
+    "http_status": 200,
+    "source": "download",
+    "skipped": false,
+    "note": ""
+  },
+  "SP-800-137": {
+    "sha256": "2d1c0bf459f5e1bfd41ceb5eac83bf62e4c34bf08e2e7088b37cb73a11442b98",
+    "bytes": 986916,
+    "retrieved_at": "2026-08-08T21:37:26+00:00",
+    "url": "https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-137.pdf",
+    "http_status": 200,
+    "source": "download",
+    "skipped": false,
+    "note": ""
+  },
+  "SP-800-18r2": {
+    "sha256": "640f9124469f285fc39dbeffd59708c84043d1a6b64cc87988f31e7e98942371",
+    "bytes": 1313448,
+    "retrieved_at": "2026-08-08T21:37:20+00:00",
+    "url": "https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-18r2.pdf",
+    "http_status": 200,
+    "source": "download",
+    "skipped": false,
+    "note": ""
+  },
+  "SP-800-218": {
+    "sha256": "617746e553a9e2da49bfbd4eef0dfc3094758a39b869314e4173ac36605cde22",
+    "bytes": 739891,
+    "retrieved_at": "2026-08-08T21:37:29+00:00",
+    "url": "https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-218.pdf",
+    "http_status": 200,
+    "source": "download",
+    "skipped": false,
+    "note": ""
+  },
+  "SP-800-218A": {
+    "sha256": "e088c8bc75716824dae7c36a987f408364638561d381ed001b5c12254a7b10d8",
+    "bytes": 650661,
+    "retrieved_at": "2026-08-08T21:37:32+00:00",
+    "url": "https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-218A.pdf",
+    "http_status": 200,
+    "source": "download",
+    "skipped": false,
+    "note": ""
+  },
+  "SP-800-30r1": {
+    "sha256": "f214087f0bdb35932a28c16eb93932a33c67a6edfb5e6f1638866bd201c98e04",
+    "bytes": 826897,
+    "retrieved_at": "2026-08-08T21:37:22+00:00",
+    "url": "https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-30r1.pdf",
+    "http_status": 200,
+    "source": "download",
+    "skipped": false,
+    "note": ""
+  },
+  "SP-800-37r2": {
+    "sha256": "4f75e1136bb905a654f1bcd9eefefb4108f47597276ee5eec0688f6d96f6a01d",
+    "bytes": 2270327,
+    "retrieved_at": "2026-08-08T21:37:02+00:00",
+    "url": "https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-37r2.pdf",
+    "http_status": 200,
+    "source": "download",
+    "skipped": false,
+    "note": ""
+  },
+  "SP-800-39": {
+    "sha256": "cf680760d171fc590396c1d98eef184af96efa971ef9880830cd2912ea1a54a8",
+    "bytes": 1228127,
+    "retrieved_at": "2026-08-08T21:37:24+00:00",
+    "url": "https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-39.pdf",
+    "http_status": 200,
+    "source": "download",
+    "skipped": false,
+    "note": ""
+  },
+  "SP-800-53B-HIGH": {
+    "sha256": "60576970caef91b2cba56d46e5948b72e3b879434fc2a4840bc4179e5e75cfd7",
+    "bytes": 12492,
+    "retrieved_at": "2026-08-08T21:37:08+00:00",
+    "url": "https://raw.githubusercontent.com/usnistgov/oscal-content/main/nist.gov/SP800-53/rev5/json/NIST_SP-800-53_rev5_HIGH-baseline_profile.json",
+    "http_status": 200,
+    "source": "download",
+    "skipped": false,
+    "note": ""
+  },
+  "SP-800-53B-LOW": {
+    "sha256": "8fd206017c8d718b44bdef612c2ff321a9fd84d97a515c8ec33c4619accbef6e",
+    "bytes": 7234,
+    "retrieved_at": "2026-08-08T21:37:04+00:00",
+    "url": "https://raw.githubusercontent.com/usnistgov/oscal-content/main/nist.gov/SP800-53/rev5/json/NIST_SP-800-53_rev5_LOW-baseline_profile.json",
+    "http_status": 200,
+    "source": "download",
+    "skipped": false,
+    "note": ""
+  },
+  "SP-800-53B-MODERATE": {
+    "sha256": "9030dbf1f13169947eb97eb101b4bd2f00d3c151b100455a923ac75803f00ea1",
+    "bytes": 10498,
+    "retrieved_at": "2026-08-08T21:37:06+00:00",
+    "url": "https://raw.githubusercontent.com/usnistgov/oscal-content/main/nist.gov/SP800-53/rev5/json/NIST_SP-800-53_rev5_MODERATE-baseline_profile.json",
+    "http_status": 200,
+    "source": "download",
+    "skipped": false,
+    "note": ""
+  },
+  "SP-800-53B-PRIVACY": {
+    "sha256": "7e650c4397ad633eadeaf510baa523372849b1fa3e18207b6c6b70ed456224f9",
+    "bytes": 6064,
+    "retrieved_at": "2026-08-08T21:37:10+00:00",
+    "url": "https://raw.githubusercontent.com/usnistgov/oscal-content/main/nist.gov/SP800-53/rev5/json/NIST_SP-800-53_rev5_PRIVACY-baseline_profile.json",
+    "http_status": 200,
+    "source": "download",
+    "skipped": false,
+    "note": ""
+  },
+  "SP-800-53r5": {
+    "sha256": "01f37cf90ea99d92242c936cbfbdebcc338eef1f71454e2acac36cc56e9bc062",
+    "bytes": 10442037,
+    "retrieved_at": "2026-08-08T21:37:02+00:00",
+    "url": "https://raw.githubusercontent.com/usnistgov/oscal-content/main/nist.gov/SP800-53/rev5/json/NIST_SP-800-53_rev5_catalog.json",
+    "http_status": 200,
+    "source": "download",
+    "skipped": false,
+    "note": ""
+  },
+  "SP-800-60v1r1": {
+    "sha256": "6f13f57f11697efcba694d0c9935c99168512f737cc76f2c432f248550128460",
+    "bytes": 338329,
+    "retrieved_at": "2026-08-08T21:37:17+00:00",
+    "url": "https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-60v1r1.pdf",
+    "http_status": 200,
+    "source": "download",
+    "skipped": false,
+    "note": ""
+  },
+  "SP-800-60v2r1": {
+    "sha256": "0b4c5128b39a90f1bb1c1004f22bfe1fa34110222da740011f86c050983dc8de",
+    "bytes": 1193436,
+    "retrieved_at": "2026-08-08T21:37:18+00:00",
+    "url": "https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-60v2r1.pdf",
+    "http_status": 200,
+    "source": "download",
+    "skipped": false,
+    "note": ""
+  }
+}

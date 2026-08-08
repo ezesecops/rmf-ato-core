@@ -228,11 +228,11 @@
       "pub_date": "rolling",
       "tier": 2,
       "format": "web",
-      "url": "https://airc.nist.gov/AI_RMF_Knowledge_Base/Playbook",
+      "url": "https://airc.nist.gov/docs/playbook.json",
       "landing_page": "https://airc.nist.gov/AI_RMF_Knowledge_Base/Playbook",
       "status": "final",
       "license": "public-domain-us-gov",
-      "notes": "Web-native resource, no canonical PDF. OPTIONAL for v1 — include only if scraping is clean; otherwise defer to v1.1 and note the deferral in the data card. If included, record retrieval date in provenance."
+      "notes": "Web-native resource, no canonical PDF. URL CORRECTION (Stage 2, 2026-08-08, maintainer-approved inclusion): the Playbook page is a JavaScript shell whose HTML carries no content; it loads /docs/playbook.json, which the site publishes as 72 structured records (title 'GOVERN 1.1', description, section_about, section_actions, section_doc, section_ref). Ingesting that JSON directly is cleaner and more traceable than scraping the rendered page, so url points at it and landing_page keeps the human-facing address. One row per subcategory, chunk_type 'ai_rmf_subcategory'; rows are attributed to this doc_id, NOT to AI-100-1. Rolling resource: record retrieval date in provenance."
     },
     {
       "doc_id": "SP-800-218",
