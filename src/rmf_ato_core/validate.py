@@ -37,6 +37,28 @@ FURNITURE_PATTERNS = (
     re.compile(r"this publication is available free of charge", re.IGNORECASE),
 )
 
+# A reference-list entry: "[FIPS 199] Standards for…" or "Smith, J. (2004)…".
+# These carry no guidance — they are pointers to other documents — and they
+# retrieve badly because they are mostly titles and numbers.
+BIBLIOGRAPHY_PATTERNS = (
+    re.compile(r"^\[[A-Z0-9][A-Z0-9 .\-]{0,40}\]\s"),
+    re.compile(r"^[A-Z][A-Za-z'’\-]+,\s+[A-Z]\.(\s*[A-Z]\.)*[,\s]+(\(\d{4}\)|[\"“])"),
+)
+
+# The remnant of a running header that survived furniture stripping, e.g. a row
+# opening "APPENDIX B PAGE 91" or a path segment that is a single letter.
+RUNNING_HEADER_PATTERNS = (
+    re.compile(r"^\s*(CHAPTER\s+\w+|APPENDIX\s+[A-Z])\b[\s\W]{0,8}PAGE\b", re.IGNORECASE),
+)
+SINGLE_CHAR_SEGMENT_RE = re.compile(r"(?:^|\s>\s)[A-Za-z0-9](?:\s>\s|$)")
+
+# A section that begins mid-sentence lost its opening to a page break or a
+# mis-detected heading, so it starts somewhere its author never started.
+MIDSENTENCE_PATTERNS = (
+    re.compile(r"^[a-z]"),
+    re.compile(r"^\d[\d,.\-]*\s+[a-z]"),
+)
+
 # Expected-count ranges. Out-of-range is a warning, not a rejection: it means a
 # parser probably drifted, which is a question for the maintainer.
 EXPECTED_COUNTS = {
@@ -138,7 +160,31 @@ def validate_rows(
             reject(row, "no_furniture", "text matches a header/footer/page-number pattern")
             continue
 
-        # 8. unique_id and near_dupe
+        # 8. bibliography_entry
+        if any(pattern.match(row.text) for pattern in BIBLIOGRAPHY_PATTERNS):
+            reject(row, "bibliography_entry", "text is a reference-list entry, not guidance")
+            continue
+
+        # 9. running_header_fragment
+        header_hit = any(
+            pattern.match(candidate)
+            for pattern in RUNNING_HEADER_PATTERNS
+            for candidate in (row.text, row.section_path or "")
+        )
+        if header_hit or SINGLE_CHAR_SEGMENT_RE.search(row.section_path or ""):
+            reject(row, "running_header_fragment",
+                   "text or section_path is a running-header remnant")
+            continue
+
+        # 10. midsentence_fragment
+        if row.chunk_type == "section" and any(
+            pattern.match(row.text) for pattern in MIDSENTENCE_PATTERNS
+        ):
+            reject(row, "midsentence_fragment",
+                   f"section text begins mid-sentence: {row.text[:60]!r}")
+            continue
+
+        # 11. unique_id and near_dupe
         if row.id in seen_ids:
             reject(row, "unique_id", "duplicate row id")
             continue
@@ -147,7 +193,7 @@ def validate_rows(
             reject(row, "near_dupe", f"text identical to {seen_text[fingerprint]}")
             continue
 
-        # 9. encoding_clean
+        # 12. encoding_clean
         if "�" in row.text or _has_control_chars(row.text):
             reject(row, "encoding_clean", "replacement or control characters in text")
             continue

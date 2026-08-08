@@ -768,6 +768,100 @@ TASK_RE = re.compile(r"^TASK\s+([PCSIARM]-\d+)\b")
 TASK_STOP_RE = re.compile(r"^(CHAPTER|APPENDIX)\s", re.IGNORECASE)
 
 
+def layout_context(lines: list[Line]) -> tuple[float, set[str], frozenset[int]]:
+    """Recompute the layout signals a handler needs.
+
+    Cheap enough to redo inside a handler, and keeps the handler signature the
+    same for every document.
+    """
+    page_count = max((line.page for line in lines), default=1)
+    body_size = body_font_size(lines)
+    repeating = find_repeating_furniture(lines, page_count)
+    contents_pages = frozenset(find_contents_pages(lines, page_count))
+    return body_size, repeating, contents_pages
+
+
+def find_appendix_span(
+    lines: list[Line], title: str, body_size: float, min_size_delta: float = 3.0
+) -> tuple[int, int] | None:
+    """Page range of an appendix identified by its display title.
+
+    An appendix title is set much larger than body text, so the next line at
+    that size ends the span. Returns None when the title never appears at title
+    size, which means the assumption behind the caller no longer holds.
+    """
+    start: int | None = None
+    for line in lines:
+        text = line.text.strip()
+        is_title_size = line.size >= body_size + min_size_delta
+        if start is None:
+            if is_title_size and text.upper() == title.upper():
+                start = line.page
+            continue
+        if is_title_size and line.page > start:
+            return (start, line.page - 1)
+    if start is None:
+        return None
+    return (start, max(line.page for line in lines))
+
+
+def extract_bold_term_definitions(
+    builder: PdfRowBuilder,
+    lines: list[Line],
+    body_size: float,
+    span: tuple[int, int],
+    path: str,
+    repeating: set[str],
+    contents_pages: frozenset[int],
+) -> list[Row]:
+    """One row per term for a glossary that marks its terms with bold type.
+
+    SP 800-37's Appendix B does not use the "TERM: definition" shape the other
+    glossaries use — the term sits alone on a bold line, followed by an optional
+    bracketed source and then the definition — so the font, not punctuation, is
+    what separates entries.
+    """
+    rows: list[Row] = []
+    current_term: str | None = None
+    current_body: list[str] = []
+    start, end = span
+
+    def flush() -> None:
+        if current_term is None:
+            return
+        body = join_lines(current_body).strip()
+        text = f"{current_term}: {body}" if body else current_term
+        if len(text) < 40:
+            builder.reject(current_term, "definition_too_short", f"{len(text)} chars")
+            return
+        rows.append(builder.row("definition", current_term, text, f"{path} > {current_term}"))
+
+    for line in lines:
+        if not start <= line.page <= end:
+            continue
+        if is_furniture(line, repeating, contents_pages):
+            continue
+        text = line.text.strip()
+        if not text:
+            continue
+        # A bold line at body size is a term; the appendix title and its
+        # introduction are set larger and are skipped.
+        if line.bold and abs(line.size - body_size) < 0.5 and len(text) <= 80:
+            if current_term is not None and not current_body:
+                # A long term wraps onto a second bold line ("authorizing
+                # official" / "designated representative"); it is one term, not
+                # two, and treating it as two leaves the first with no body.
+                current_term = f"{current_term} {text}"
+                continue
+            flush()
+            current_term = text
+            current_body = []
+        elif current_term is not None and line.size <= body_size:
+            current_body.append(text)
+    flush()
+    return rows
+
+
 def handle_sp_800_37r2(
     builder: PdfRowBuilder, pdf_path: Path, lines: list[Line], sections: list[Section]
 ) -> list[Row]:
@@ -784,11 +878,25 @@ def handle_sp_800_37r2(
     rows = emit_blocks(builder, sorted(kept, key=lambda b: (b.key[0], int(b.key.split("-")[1]))),
                        "task", min_chars=200)
 
-    # Sections that only exist to hold task blocks would duplicate them.
+    body_size, repeating, contents_pages = layout_context(lines)
+    glossary_span = find_appendix_span(lines, "GLOSSARY", body_size)
+    if glossary_span is None:
+        builder.reject("APPENDIX B", "glossary_not_found",
+                       "no 'GLOSSARY' appendix title found at title size")
+    else:
+        rows.extend(extract_bold_term_definitions(
+            builder, lines, body_size, glossary_span,
+            "APPENDIX B > GLOSSARY", repeating, contents_pages,
+        ))
+
+    # Sections that only exist to hold task blocks would duplicate them, and the
+    # glossary appendix is now covered term by term.
     task_pages = {block.page for block in kept}
     remaining = [
         section for section in sections
-        if not TASK_RE.match(section.heading) and section.page not in task_pages
+        if not TASK_RE.match(section.heading)
+        and section.page not in task_pages
+        and not (glossary_span and glossary_span[0] <= section.page <= glossary_span[1])
     ]
     rows.extend(_sections_and_glossary(builder, remaining))
     return rows
@@ -897,10 +1005,50 @@ def handle_ssdf(
 INFO_TYPE_RE = re.compile(r"^(D\.\d+(?:\.\d+)*)\s+(?=\S)")
 
 
+# SP 800-60 Volume 2's Appendix E reproduces OMB memoranda and legislative
+# provisions as wide reference tables. It is source material for the impact
+# determinations, not guidance, and it extracts as citation soup — so it is
+# excluded whole rather than published as damaged sections.
+EXCLUDED_APPENDIX_RE = re.compile(r"^APPENDIX\s+E\b", re.IGNORECASE)
+
+
+def find_excluded_appendix_start(
+    lines: list[Line], pattern: re.Pattern[str], contents_pages: frozenset[int]
+) -> int | None:
+    """First body page of an excluded appendix, ignoring its contents entries."""
+    for line in lines:
+        if line.page in contents_pages or _TOC_RE.search(line.text):
+            continue
+        if pattern.match(line.text.strip()):
+            return line.page
+    return None
+
+
 def handle_sp_800_60v2(
     builder: PdfRowBuilder, pdf_path: Path, lines: list[Line], sections: list[Section]
 ) -> list[Row]:
-    """One row per information type, carrying its provisional categorization."""
+    """One row per information type, carrying its provisional categorization.
+
+    Appendix E is dropped entirely; each excluded section is logged so the
+    exclusion is auditable rather than invisible.
+    """
+    _, _, contents_pages = layout_context(lines)
+    excluded_from = find_excluded_appendix_start(lines, EXCLUDED_APPENDIX_RE, contents_pages)
+    if excluded_from is not None:
+        last_page = max(line.page for line in lines)
+        excluded = [s for s in sections if s.page >= excluded_from]
+        for section in excluded:
+            builder.reject(
+                ref=f"p{section.page}:{clean_heading(section.heading)[:60]}",
+                rule="excluded_appendix",
+                detail=(
+                    f"SP 800-60 Vol 2 Appendix E (OMB memoranda and legal-provision "
+                    f"tables), pages {excluded_from}-{last_page}, excluded from v1"
+                ),
+            )
+        sections = [s for s in sections if s.page < excluded_from]
+        lines = [line for line in lines if line.page < excluded_from]
+
     blocks = extract_blocks(sections, INFO_TYPE_RE)
     kept, discarded = keep_longest_per_key(blocks)
     for block in discarded:

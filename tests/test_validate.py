@@ -137,7 +137,114 @@ def test_furniture_text_is_rejected():
     assert rules(run(boilerplate)) == ["no_furniture"]
 
 
-# --- rule 8: unique_id and near_dupe ----------------------------------------
+# --- rule 8: bibliography_entry ---------------------------------------------
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "[FIPS 199] Standards for Security Categorization of Federal Information "
+        "and Information Systems, February 2004. " + "A" * 200,
+        "[OMB A-130] Managing Information as a Strategic Resource. " + "A" * 200,
+        'Ross, R. (2018). "Risk Management Framework for Information Systems." ' + "A" * 200,
+    ],
+)
+def test_reference_list_entries_are_rejected(text):
+    row = good_row(id="FIPS-199/section/appendix-b-references", doc_id="FIPS-199",
+                   chunk_type="section", control_id=None, sha256_source="b" * 64, text=text)
+    assert rules(run(row)) == ["bibliography_entry"]
+
+
+def test_a_bracketed_citation_inside_a_definition_is_not_a_bibliography_entry():
+    # SP 800-37's glossary prints the source after the term, not at the start.
+    row = good_row(
+        id="SP-800-37r2/definition/assurance", doc_id="SP-800-37r2",
+        chunk_type="definition", control_id=None, sha256_source="b" * 64,
+        text="assurance: [ISO 15026, Adapted] Grounds for justified confidence that a "
+             "claim has been or will be achieved. " + "A" * 100,
+    )
+    assert not run(row).rejections
+
+
+# --- rule 9: running_header_fragment ----------------------------------------
+
+def test_running_header_remnants_are_rejected():
+    row = good_row(
+        id="SP-800-37r2/section/appendix-b", doc_id="SP-800-37r2", chunk_type="section",
+        control_id=None, sha256_source="b" * 64,
+        text="APPENDIX B PAGE 91 " + "A" * 300,
+    )
+    assert rules(run(row)) == ["running_header_fragment"]
+
+
+def test_chapter_page_remnants_are_rejected_via_section_path():
+    row = good_row(
+        id="SP-800-37r2/section/x", doc_id="SP-800-37r2", chunk_type="section",
+        control_id=None, sha256_source="b" * 64,
+        section_path="CHAPTER THREE PAGE 29 > something",
+    )
+    assert rules(run(row)) == ["running_header_fragment"]
+
+
+def test_single_character_path_segments_are_rejected():
+    for path in ("B", "APPENDIX B > E > Something", "D > Tail"):
+        row = good_row(
+            id=f"SP-800-60v2r1/section/{path[:1].lower()}", doc_id="SP-800-60v2r1",
+            chunk_type="section", control_id=None, sha256_source="b" * 64,
+            section_path=path,
+        )
+        assert rules(run(row)) == ["running_header_fragment"], path
+
+
+def test_a_real_path_with_short_but_multi_character_segments_survives():
+    row = good_row(
+        id="SP-800-218/ssdf_practice/po.1.1", doc_id="SP-800-218",
+        chunk_type="ssdf_practice", control_id=None, sha256_source="b" * 64,
+        section_path="SSDF Practices > PO > PO.1 > PO.1.1",
+    )
+    assert not run(row).rejections
+
+
+# --- rule 10: midsentence_fragment ------------------------------------------
+
+def test_sections_starting_mid_sentence_are_rejected():
+    row = good_row(
+        id="SP-800-39/section/x", doc_id="SP-800-39", chunk_type="section",
+        control_id=None, sha256_source="b" * 64,
+        text="and the organization must therefore consider. " + "A" * 300,
+    )
+    assert rules(run(row)) == ["midsentence_fragment"]
+
+
+def test_dangling_numeric_fragments_are_rejected():
+    row = good_row(
+        id="SP-800-60v2r1/section/12958", doc_id="SP-800-60v2r1", chunk_type="section",
+        control_id=None, sha256_source="b" * 64,
+        text="12958, as amended by Executive Order 13292. " + "A" * 300,
+    )
+    assert rules(run(row)) == ["midsentence_fragment"]
+
+
+def test_a_numbered_heading_is_not_a_dangling_fragment():
+    row = good_row(
+        id="FIPS-199/section/1-purpose", doc_id="FIPS-199", chunk_type="section",
+        control_id=None, sha256_source="b" * 64,
+        text="1 PURPOSE\n\nThe E-Government Act of 2002 recognized the importance. " + "A" * 300,
+    )
+    assert not run(row).rejections
+
+
+def test_midsentence_rule_applies_only_to_sections():
+    # A glossary term is lowercase by convention and must not be caught.
+    row = good_row(
+        id="SP-800-37r2/definition/assurance", doc_id="SP-800-37r2",
+        chunk_type="definition", control_id=None, sha256_source="b" * 64,
+        text="assurance: Grounds for justified confidence that a claim has been achieved. "
+             + "A" * 100,
+    )
+    assert not run(row).rejections
+
+
+# --- rule 11: unique_id and near_dupe ---------------------------------------
 
 def test_duplicate_ids_are_rejected_on_the_later_row():
     report = run(good_row(), good_row(text="B" * 400))

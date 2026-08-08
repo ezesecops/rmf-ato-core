@@ -4,20 +4,20 @@ Documents in manifest: **21**
 
 | doc_id | format | tier | URL status | notes |
 |---|---|---|---|---|
-| `SP-800-37r2` | pdf | 1 | 206 (GET (range)) | HEAD returned 404, confirmed by ranged GET |
+| `SP-800-37r2` | pdf | 1 | 200 (HEAD) |  |
 | `SP-800-53r5` | oscal | 1 | 200 (HEAD) |  |
 | `SP-800-53Ar5` | embedded-in-oscal | 1 | — (no url) | no url (manual or embedded source) |
 | `SP-800-53B-LOW` | oscal | 1 | 200 (HEAD) |  |
 | `SP-800-53B-MODERATE` | oscal | 1 | 200 (HEAD) |  |
 | `SP-800-53B-HIGH` | oscal | 1 | 200 (HEAD) |  |
 | `SP-800-53B-PRIVACY` | oscal | 1 | 200 (HEAD) |  |
-| `FIPS-199` | pdf | 1 | 206 (GET (range)) | HEAD returned 404, confirmed by ranged GET |
+| `FIPS-199` | pdf | 1 | 200 (HEAD) |  |
 | `FIPS-200` | pdf | 1 | 206 (GET (range)) | HEAD returned 404, confirmed by ranged GET |
 | `SP-800-60v1r1` | pdf | 1 | 206 (GET (range)) | HEAD returned 404, confirmed by ranged GET |
 | `SP-800-60v2r1` | pdf | 1 | 206 (GET (range)) | HEAD returned 404, confirmed by ranged GET |
 | `SP-800-18r2` | pdf | 1 | 206 (GET (range)) | HEAD returned 404, confirmed by ranged GET |
 | `SP-800-30r1` | pdf | 1 | 206 (GET (range)) | HEAD returned 404, confirmed by ranged GET |
-| `SP-800-39` | pdf | 1 | 206 (GET (range)) | HEAD returned 404, confirmed by ranged GET |
+| `SP-800-39` | pdf | 1 | 200 (HEAD) |  |
 | `SP-800-137` | pdf | 1 | 206 (GET (range)) | HEAD returned 404, confirmed by ranged GET |
 | `AI-100-1` | pdf | 2 | 206 (GET (range)) | HEAD returned 404, confirmed by ranged GET |
 | `AI-RMF-PLAYBOOK` | web | 2 | 200 (HEAD) |  |
