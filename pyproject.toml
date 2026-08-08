@@ -1,0 +1,29 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "rmf-ato-core"
+version = "0.1.0"
+description = "Curated, provenance-tracked dataset of current-revision NIST RMF/ATO and AI governance publications."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "CC0-1.0" }
+authors = [{ name = "ezesecops" }]
+
+# Deliberately short. No pandas, no langchain, no embedding libraries.
+dependencies = [
+    "httpx>=0.27",        # fetch (Stages 1-2)
+    "pymupdf>=1.24",      # PDF text extraction (Stage 4)
+    "pyarrow>=16.0",      # parquet export (Stage 7)
+    "huggingface_hub>=0.24",  # upload (Stage 9)
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/rmf_ato_core"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

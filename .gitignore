@@ -1,0 +1,27 @@
+# Data artifacts are reproducible from the manifest; only provenance.json is committed
+# (it is the integrity record, not the payload).
+# (Directories are kept via .gitkeep so a clean checkout has somewhere to write;
+# git cannot re-include a file whose parent directory is excluded, hence the
+# per-directory contents-only pattern.)
+data/raw/*
+!data/raw/.gitkeep
+!data/raw/manual/
+data/raw/manual/*
+!data/raw/manual/.gitkeep
+data/interim/*
+!data/interim/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+
+# macOS
+.DS_Store
