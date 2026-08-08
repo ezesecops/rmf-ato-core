@@ -1,0 +1,18 @@
+{
+  "profile": {
+    "uuid": "00000000-0000-4000-8000-000000000001",
+    "metadata": {
+      "title": "Fixture baseline profile (hand-made, not NIST content)",
+      "version": "test",
+      "oscal-version": "1.2.2"
+    },
+    "imports": [
+      {
+        "href": "#catalog",
+        "include-controls": [
+          { "with-ids": ["ac-1", "ac-1.1", "au-2"] }
+        ]
+      }
+    ]
+  }
+}
