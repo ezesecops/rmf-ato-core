@@ -20,8 +20,11 @@ install:
 verify:
 	$(PY) scripts/01_verify_manifest.py --manifest $(MANIFEST)
 
+# --include-web is on here because the maintainer opted the AI RMF Playbook into
+# v1 (M2 checkpoint). The flag stays opt-in at the script level so the default
+# behaviour still matches the spec.
 fetch:
-	$(PY) scripts/02_fetch.py --manifest $(MANIFEST)
+	$(PY) scripts/02_fetch.py --manifest $(MANIFEST) --include-web
 
 parse-oscal:
 	$(PY) scripts/03_parse_oscal.py --manifest $(MANIFEST)

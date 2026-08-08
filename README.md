@@ -13,6 +13,23 @@ correct, and fully traceable**. Concretely:
 - No baked-in prompts, no synthetic Q&A, no precomputed embeddings. Source text only.
 - Rejected content is logged, never silently dropped.
 
+## Current build
+
+`make all` reproduces the dataset end to end in about a minute (artifacts cached after the first
+run) and produces:
+
+| | |
+|---|---|
+| rows published | **5,623** |
+| parquet size | **2.1 MB**, single `train` split |
+| documents | 19 retrieved, 2 awaiting manual placement |
+| rows rejected | **921**, every one logged with a rule and reason |
+| control IDs failing the family whitelist | **0** |
+
+Headline counts landed on the published figures independently: 47 RMF tasks, 72 AI RMF
+subcategories, 20 control families, and baselines of 149 / 287 / 370 / 96 for
+LOW / MODERATE / HIGH / PRIVACY.
+
 ## Pipeline
 
 ```

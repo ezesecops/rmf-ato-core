@@ -12,7 +12,7 @@
   "AI-RMF-PLAYBOOK": {
     "sha256": "aecbee3d3c8820816d295b11d10fb61324b17c25c2ff39ee95e2aa5654555bba",
     "bytes": 413720,
-    "retrieved_at": "2026-08-08T21:38:49+00:00",
+    "retrieved_at": "2026-08-08T22:24:12+00:00",
     "url": "https://airc.nist.gov/docs/playbook.json",
     "http_status": 200,
     "source": "download",
