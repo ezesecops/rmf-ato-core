@@ -157,17 +157,17 @@
       "notes": "Information-type appendix entries (D.x sections) chunk one information type per chunk with its provisional categorization. Same Rev 2 caveat as Volume 1."
     },
     {
-      "doc_id": "SP-800-18r1",
-      "title": "Guide for Developing Security Plans for Federal Information Systems",
-      "revision": "Rev 1",
-      "pub_date": "2006-02",
+      "doc_id": "SP-800-18r2",
+      "title": "Developing Security, Privacy, and Cybersecurity Supply Chain Risk Management Plans for Systems",
+      "revision": "Rev 2",
+      "pub_date": "2026-06",
       "tier": 1,
       "format": "pdf",
-      "url": "https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-18r1.pdf",
-      "landing_page": "https://csrc.nist.gov/pubs/sp/800/18/r1/final",
+      "url": "https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-18r2.pdf",
+      "landing_page": "https://csrc.nist.gov/pubs/sp/800/18/r2/final",
       "status": "final",
       "license": "public-domain-us-gov",
-      "notes": "SSP structure guidance. NOTE: SP 800-18 Rev 2 has been in development — check landing page at build time; if Rev 2 is final, replace this entry and log the substitution."
+      "notes": "SSP structure guidance. SUBSTITUTION (Stage 1, 2026-08-08, maintainer-approved): replaced SP-800-18r1, which the landing page reports as withdrawn on 2026-06-30 and superseded by this revision. Rev 2 is retitled and broadened to cover privacy and C-SCRM plans. Chunk by numbered section; the SSP template/outline appendices chunk one section per chunk."
     },
     {
       "doc_id": "SP-800-30r1",

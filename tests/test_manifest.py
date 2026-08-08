@@ -39,7 +39,7 @@ def test_supersession_watchlist_matches_the_documented_documents():
     flagged = {doc.doc_id for doc in manifest.documents if doc.needs_supersession_check}
     # SP 800-60 (both volumes), SP 800-18, SP 800-218 carry "check at build time"
     # notes; the notes scan may add more, but must never drop these.
-    assert {"SP-800-60v1r1", "SP-800-60v2r1", "SP-800-18r1", "SP-800-218"} <= flagged
+    assert {"SP-800-60v1r1", "SP-800-60v2r1", "SP-800-18r2", "SP-800-218"} <= flagged
 
 
 def test_manual_documents_fall_back_to_landing_page_for_source_url():

@@ -30,10 +30,13 @@ MIN_SECONDS_BETWEEN_REQUESTS = 2.0
 # Documents whose manifest notes warn that a newer revision may have gone final
 # (BUILD_SPEC §5.3). Kept explicit so the check cannot silently stop running,
 # and supplemented by a notes scan so manifest edits are picked up too.
+# SP-800-18r2 stays on the list although it is the current revision: it is the
+# entry that already moved once, so it is the one most worth re-checking.
 SUPERSESSION_WATCHLIST = {
     "SP-800-60v1r1",
     "SP-800-60v2r1",
     "SP-800-18r1",
+    "SP-800-18r2",
     "SP-800-218",
 }
 
