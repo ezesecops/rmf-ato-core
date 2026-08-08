@@ -13,6 +13,8 @@ from rmf_ato_core.schema import (
     FIELD_ORDER,
     MAX_TEXT_LEN,
     MIN_TEXT_LEN,
+    MIN_TEXT_LEN_STRUCTURED,
+    min_text_len,
     Row,
     is_valid_control_id,
     make_id,
@@ -155,3 +157,17 @@ def test_normalize_text_strips_control_characters():
 
 def test_length_bounds_are_the_spec_values():
     assert (MIN_TEXT_LEN, MAX_TEXT_LEN) == (200, 8000)
+
+
+def test_structured_rows_get_the_lower_floor():
+    # A complete short control (IR-5, "Track and document incidents.") must not
+    # be treated as PDF furniture.
+    assert min_text_len("control") == MIN_TEXT_LEN_STRUCTURED
+    assert min_text_len("assessment_objective") == MIN_TEXT_LEN_STRUCTURED
+    assert min_text_len("baseline") == MIN_TEXT_LEN_STRUCTURED
+
+
+def test_pdf_derived_rows_keep_the_full_floor():
+    for chunk_type in ("section", "task", "definition", "table",
+                       "ai_rmf_subcategory", "ssdf_practice"):
+        assert min_text_len(chunk_type) == MIN_TEXT_LEN

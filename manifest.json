@@ -29,7 +29,7 @@
     {
       "doc_id": "SP-800-53r5",
       "title": "Security and Privacy Controls for Information Systems and Organizations",
-      "revision": "Rev 5 (includes Rev 5.1.1 patch release)",
+      "revision": "Rev 5 (OSCAL content version 5.2.0)",
       "pub_date": "2020-09",
       "tier": 1,
       "format": "oscal",
@@ -42,7 +42,7 @@
     {
       "doc_id": "SP-800-53Ar5",
       "title": "Assessing Security and Privacy Controls in Information Systems and Organizations",
-      "revision": "Rev 5",
+      "revision": "Rev 5 (embedded in SP 800-53 OSCAL content version 5.2.0)",
       "pub_date": "2022-01",
       "tier": 1,
       "format": "embedded-in-oscal",
@@ -55,7 +55,7 @@
     {
       "doc_id": "SP-800-53B-LOW",
       "title": "Control Baselines for Information Systems and Organizations — LOW baseline",
-      "revision": "Rev 5",
+      "revision": "Rev 5 (OSCAL content version 5.2.0)",
       "pub_date": "2020-10",
       "tier": 1,
       "format": "oscal",
@@ -68,7 +68,7 @@
     {
       "doc_id": "SP-800-53B-MODERATE",
       "title": "Control Baselines for Information Systems and Organizations — MODERATE baseline",
-      "revision": "Rev 5",
+      "revision": "Rev 5 (OSCAL content version 5.2.0)",
       "pub_date": "2020-10",
       "tier": 1,
       "format": "oscal",
@@ -81,7 +81,7 @@
     {
       "doc_id": "SP-800-53B-HIGH",
       "title": "Control Baselines for Information Systems and Organizations — HIGH baseline",
-      "revision": "Rev 5",
+      "revision": "Rev 5 (OSCAL content version 5.2.0)",
       "pub_date": "2020-10",
       "tier": 1,
       "format": "oscal",
@@ -94,7 +94,7 @@
     {
       "doc_id": "SP-800-53B-PRIVACY",
       "title": "Control Baselines for Information Systems and Organizations — PRIVACY baseline",
-      "revision": "Rev 5",
+      "revision": "Rev 5 (OSCAL content version 5.2.0)",
       "pub_date": "2020-10",
       "tier": 1,
       "format": "oscal",

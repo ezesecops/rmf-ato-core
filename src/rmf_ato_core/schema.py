@@ -46,10 +46,41 @@ CONTROL_ID_RE = re.compile(
     r"^(" + "|".join(CONTROL_FAMILIES) + r")-\d+(\.\d+)?$"
 )
 
-# Text length bounds (chars). Below the floor a chunk carries no retrievable
-# meaning; above the ceiling it stops being one idea.
-MIN_TEXT_LEN = 200
+# Text length bounds (chars). Above the ceiling a chunk stops being one idea.
 MAX_TEXT_LEN = 8000
+
+# The floor exists to catch PDF furniture — page numbers, orphaned headers,
+# extraction fragments — where short text means broken text.
+MIN_TEXT_LEN = 200
+
+# Structured rows get a lower floor, because there short text means *complete*
+# text: IR-5 in full is "Track and document incidents." (86 chars with its
+# heading). Applying the furniture heuristic to OSCAL-derived rows would drop
+# ~135 real controls, enhancements and objectives.
+# (Maintainer decision, M2 checkpoint 2026-08-08.)
+MIN_TEXT_LEN_STRUCTURED = 80
+
+# Only the OSCAL-derived types. PDF-derived per-unit rows (ai_rmf_subcategory,
+# ssdf_practice) are deliberately NOT here: they come from layout analysis, so a
+# short one may well be a broken extraction. Revisit at the M3 checkpoint with
+# real numbers rather than assuming.
+STRUCTURED_CHUNK_TYPES: frozenset[str] = frozenset({
+    "control",
+    "control_enhancement",
+    "control_discussion",
+    "assessment_objective",
+    "assessment_method",
+    "baseline",
+})
+
+
+def min_text_len(chunk_type: str) -> int:
+    """The length floor that applies to a given chunk type."""
+    return (
+        MIN_TEXT_LEN_STRUCTURED
+        if chunk_type in STRUCTURED_CHUNK_TYPES
+        else MIN_TEXT_LEN
+    )
 
 
 def is_valid_control_id(value: str) -> bool:

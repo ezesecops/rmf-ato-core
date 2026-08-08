@@ -349,7 +349,17 @@ class CatalogParser:
 
         for guidance in parts_named(control, "guidance"):
             body = "\n".join(flatten_part(guidance, self.params, self.stats, include_own_label=False))
-            if not body.strip():
+            if not body.strip() or body.strip().rstrip(".").lower() == "none":
+                # A discussion whose entire content is "None." is a placeholder
+                # in the source, not guidance. Logged, not silently dropped.
+                self.rejections.append(
+                    Rejection(
+                        doc_id=self.doc.doc_id,
+                        ref=control_id,
+                        rule="empty_discussion",
+                        detail=f"{printed} discussion is empty or 'None.'",
+                    )
+                )
                 continue
             text = f"{printed} {title} - Discussion\n{context}\n\n{body}"
             rows.append(
