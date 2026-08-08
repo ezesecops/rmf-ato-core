@@ -147,9 +147,18 @@ def render_prose(prose: str, params: dict[str, str], stats: ParseStats | None = 
 # --- part flattening ---------------------------------------------------------
 
 def part_label(part: dict[str, Any]) -> str:
-    for prop in part.get("props", []):
-        # Ignore the sp800-53a variants; they duplicate the label in 53A style.
-        if prop.get("name") == "label" and not prop.get("class"):
+    """The label to print for a part: 'a.', '1.', or 'AC-02a.[01]'.
+
+    Statement items carry a plain label ('a.'); assessment objectives carry
+    only a class='sp800-53a' label ('AC-02a.[01]'), which is the numbering an
+    assessor actually cites, so it is used when no plain label exists.
+    """
+    labels = [prop for prop in part.get("props", []) if prop.get("name") == "label"]
+    for prop in labels:
+        if not prop.get("class"):
+            return prop.get("value", "")
+    for prop in labels:
+        if prop.get("class") == "sp800-53a":
             return prop.get("value", "")
     return ""
 
@@ -161,17 +170,25 @@ def flatten_part(
     depth: int = 0,
     include_own_label: bool = True,
 ) -> list[str]:
-    """Depth-first render of a part tree into labelled, indented lines."""
+    """Depth-first render of a part tree into one labelled line per part.
+
+    Nesting is carried by the labels ('a.', then '1.', or 'AC-02a.[01]') rather
+    than by indentation, because whitespace normalization collapses leading
+    spaces out of the published text anyway.
+    """
     lines: list[str] = []
-    indent = "  " * max(depth - 1, 0)
     label = part_label(part) if include_own_label else ""
     prose = render_prose(part.get("prose", ""), params, stats)
+    children = part.get("parts", [])
 
-    if prose or label:
+    # A label with no prose that only introduces children (assessment objective
+    # 'AC-02a.') is noise: every child already prints the fuller label
+    # 'AC-02a.[01]'. A label WITH prose ('d. Specify:') is real content.
+    if prose or (label and not children):
         prefix = f"{label} " if label else ""
-        lines.append(f"{indent}{prefix}{prose}".rstrip())
+        lines.append(f"{prefix}{prose}".rstrip())
 
-    for child in part.get("parts", []):
+    for child in children:
         lines.extend(flatten_part(child, params, stats, depth + 1))
     return lines
 

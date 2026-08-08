@@ -158,7 +158,9 @@ def test_assessment_rows_are_attributed_to_sp_800_53a(parsed):
     assert objective.doc_id == ASSESSMENT_DOC_ID
     assert objective.chunk_type == "assessment_objective"
     assert objective.control_id == "ac-1"
-    assert "an access control policy is developed and documented;" in objective.text
+    # Objectives carry only a class='sp800-53a' label, and that numbering is
+    # what an assessor cites, so it must survive into the text.
+    assert "AC-01a. an access control policy is developed and documented;" in objective.text
 
     assert method.doc_id == ASSESSMENT_DOC_ID
     assert method.chunk_type == "assessment_method"
