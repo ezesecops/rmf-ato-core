@@ -1,9 +1,14 @@
 .PHONY: help install verify fetch parse parse-oscal parse-pdf chunk validate export all test clean
 
-PY ?= python
+# Default to the project venv so the pipeline runs from a clean shell without
+# activating anything first. Override for a different interpreter:
+#   make all PYTHON=python3.12
+PYTHON ?= $(if $(wildcard .venv/bin/python),.venv/bin/python,python3)
+PY := $(PYTHON)
 MANIFEST ?= manifest.json
 
 help:
+	@echo "Using PYTHON=$(PYTHON)"
 	@echo "make install   - editable install with dev deps"
 	@echo "make verify    - Stage 1: manifest + URL verification (HUMAN REVIEW)"
 	@echo "make fetch     - Stage 2: download artifacts, write provenance.json"

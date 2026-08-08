@@ -18,7 +18,7 @@ document section — carrying the identifiers a practitioner actually cites. It 
 retrieval and fine-tuning around authorization workflows: control selection, SSP and assessment
 work, categorization, continuous monitoring, and the emerging AI governance overlay.
 
-**5,623 rows, 2.1 MB, single `train` split.** No embeddings, no synthetic Q&A, no system prompts.
+**5,510 rows, 1.9 MB, single `train` split.** No embeddings, no synthetic Q&A, no system prompts.
 
 ## Why another NIST dataset
 
@@ -63,7 +63,10 @@ rows are attributed to `SP-800-53Ar5` and cite the catalog's hash.
 Superseded or withdrawn revisions (including 182 withdrawn SP 800-53 controls, each logged by
 name); NIST annual reports and workshop proceedings; pre-2010 legacy publications except FIPS
 199/200, which remain in force; and draft publications. Also excluded from v1: CNSSI 1253 and
-DoD Instruction 8510.01, whose publishers block automated retrieval.
+DoD Instruction 8510.01, whose publishers block automated retrieval; and **SP 800-60 Volume 2
+Appendix E**, which reproduces OMB memoranda and legislative provisions as wide reference tables —
+source material for the impact determinations rather than guidance, and it extracts as citation
+soup.
 
 ## Schema
 
@@ -91,9 +94,16 @@ One row = one chunk.
 | `assessment_method` | 1,014 | | `ai_rmf_subcategory` | 154 |
 | `assessment_objective` | 1,014 | | `ssdf_practice` | 94 |
 | `control_discussion` | 999 | | `task` | 47 |
-| `control_enhancement` | 714 | | `definition` | 18 |
-| `control` | 300 | | `baseline` | 4 |
-| `section` | 1,264 | | `table` | 1 |
+| `control_enhancement` | 714 | | `baseline` | 4 |
+| `control` | 300 | | `table` | 1 |
+| `section` | 872 | | | |
+| `definition` | 297 | | | |
+
+The 297 `definition` rows come from five glossaries: SP 800-37r2 (178), SP 800-137
+(101), FIPS 199 (13), SP 800-18r2 (3) and FIPS 200 (2). The two large ones mark their
+entries typographically rather than with punctuation — SP 800-37 sets terms in bold,
+SP 800-137 marks each entry with a smaller bracketed source line — so both are read
+from the font, not from a `TERM:` pattern.
 
 ### Example rows
 
@@ -136,11 +146,34 @@ itself prints. No template marker survives into any row.
 Each stage is an independently runnable, idempotent script. Source, tests, and the **full
 rejection log** live in the GitHub repository: <https://github.com/ezesecops/rmf-ato-core>
 
-**921 rows were rejected** across the pipeline, every one recorded with a rule and a reason in
-`rejections.jsonl`. The largest categories: 545 layout fragments (whose text survives, merged into
-neighbouring sections), 182 withdrawn controls, 96 duplicate task stubs from summary tables, 36
-trailing furniture blocks, 15 empty "None." discussions, 4 exact duplicates, and 3 rows below the
-length floor. Rejected content is logged, never silently dropped.
+**1,131 rows were rejected** across the pipeline, every one recorded with a rule and a reason in
+`rejections.jsonl`. Rejected content is logged, never silently dropped.
+
+| rule | rows | what it is |
+|---|---:|---|
+| `section_too_short` | 449 | layout fragments; their text survives, merged into neighbouring sections |
+| `withdrawn_control` | 182 | SP 800-53 controls marked withdrawn in OSCAL |
+| `excluded_appendix` | 161 | SP 800-60 Vol 2 Appendix E — OMB memoranda and legal-provision tables |
+| `midsentence_fragment` | 97 | sections beginning mid-sentence (see Limitations) |
+| `duplicate_task_stub` | 96 | RMF task identifiers repeated in summary tables and contents |
+| `trailing_furniture` | 36 | stub sections with no sibling to merge into |
+| `bibliography_entry` | 29 | reference-list entries: citation apparatus, no guidance |
+| `duplicate_information_type_stub` | 26 | SP 800-60 information-type identifiers repeated in contents |
+| `length_bounds` | 19 | text outside the length bounds for its chunk type |
+| `empty_discussion` | 15 | SP 800-53 discussions whose whole content is "None." |
+| `front_matter` | 8 | title pages, forewords, signature blocks, contents |
+| `block_too_short` / `definition_too_short` | 10 | identifier blocks and glossary entries that extracted as fragments |
+| `near_dupe` | 3 | text identical to an earlier row; the later row loses |
+
+Three review passes shaped this log after the pipeline first ran end to end. The first added the
+supply-chain rules that reject reference entries, running-header remnants and mid-sentence
+fragments. The second showed those rules were discarding rows that had real guidance underneath a
+damaged first line, so the pipeline now *repairs* what it can — a running-header remnant or a
+leading citation tag over substantive text is stripped and the row is published, and rows are only
+rejected when nothing substantive remains. The third recovered content the rules had been hiding:
+SP 800-137's glossary became 101 `definition` rows, and decorative drop caps stopped being read as
+headings. `running_header_fragment` rejected 101 rows before that repair step existed and rejects
+none now.
 
 ## Provenance & integrity
 
@@ -179,13 +212,25 @@ extracted from.
   worst.
 - **Assessment objectives and methods are one row per control**, not per leaf clause. A single
   determination statement ("account managers are assigned;") is not retrievable on its own. This
-  keeps the corpus at ~5.6k coherent rows rather than ~13k fragments.
+  keeps the corpus at ~5.5k coherent rows rather than ~13k fragments.
+- **About 97 mid-sentence fragments were rejected rather than published.** PDF page breaks,
+  footnote interleaving and multi-column layout sometimes hand the extractor a passage that starts
+  partway through a sentence (`transparent the risk perceptions that organizations routinely
+  use…`). Those rows are dropped under `midsentence_fragment` and logged with the text that was
+  discarded. Two consequences worth knowing: a small amount of real guidance — mostly in SP
+  800-30r1 and SP 800-37r2 — is missing from the corpus, and section coverage of those documents is
+  therefore not continuous. Repairing the fragments would mean stitching text across page
+  boundaries, which risks joining passages that were never adjacent; dropping them was the more
+  conservative choice.
 - **CNSSI 1253 and DoDI 8510.01 are absent** from v1 — cnss.gov and esd.whs.mil block scripted
   retrieval, and their control tables were out of scope for v1 regardless.
+- **SP 800-60 Volume 2 Appendix E is absent** (see exclusions). The information-type entries it
+  supports — 113 `D.x` rows — are present.
 - **The AI RMF Playbook is a rolling web resource.** Its rows reflect the version retrieved on the
   date above and will drift as NIST updates it.
-- **Two AI RMF Core rows are shorter than the length floor** and were rejected from `AI-100-1`;
-  the Playbook carries the same subcategories with full guidance text.
+- **Nineteen rows fell outside the length bounds** and were rejected: one AI RMF subcategory
+  (`MAP 1.5`, which the Playbook carries in full), two FIPS 199 glossary terms, and sixteen
+  one-line glossary cross-references of the form "See authorization boundary."
 - **This corpus reflects publications as of the build date.** NIST revises documents, sometimes
   without notice — SP 800-18 Rev 1 was withdrawn six weeks before this build. Re-run the pipeline
   rather than assuming currency.
