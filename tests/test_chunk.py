@@ -12,7 +12,7 @@ from rmf_ato_core.chunk import (
     split_text,
 )
 from rmf_ato_core.schema import MAX_TEXT_LEN
-from tests.test_schema import make_row
+from conftest import make_row
 
 
 def section(text: str, doc_id: str = "SP-800-39", row_id: str = "SP-800-39/section/x"):

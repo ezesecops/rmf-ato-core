@@ -32,7 +32,7 @@ from rmf_ato_core.parse_pdf import (
     transcribe_impact_table,
 )
 from rmf_ato_core.parse_playbook import parse_playbook
-from tests.test_parse_oscal import make_doc
+from conftest import make_doc
 
 BODY = 10.0
 

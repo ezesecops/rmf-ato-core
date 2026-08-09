@@ -17,7 +17,7 @@ from rmf_ato_core.fetch import (
     save_provenance,
     sha256_bytes,
 )
-from tests.test_parse_oscal import make_doc
+from conftest import make_doc
 
 
 def test_pdf_must_start_with_the_pdf_header():

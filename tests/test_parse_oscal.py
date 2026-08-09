@@ -8,7 +8,6 @@ from pathlib import Path
 
 import pytest
 
-from rmf_ato_core.manifest import Document
 from rmf_ato_core.parse_oscal import (
     ASSESSMENT_DOC_ID,
     build_param_index,
@@ -20,27 +19,12 @@ from rmf_ato_core.parse_oscal import (
     render_prose,
 )
 from rmf_ato_core.schema import is_valid_control_id
+from conftest import make_doc
 
 FIXTURES = Path(__file__).parent / "fixtures"
 CATALOG = FIXTURES / "mini_catalog.json"
 PROFILE = FIXTURES / "mini_profile.json"
 FAKE_SHA = "a" * 64
-
-
-def make_doc(doc_id: str, fmt: str = "oscal", url: str | None = "https://example.gov/x.json") -> Document:
-    return Document(
-        doc_id=doc_id,
-        title=f"Title of {doc_id}",
-        revision="Rev 5",
-        pub_date="2020-09",
-        tier=1,
-        format=fmt,
-        url=url,
-        landing_page="https://example.gov/landing",
-        status="final",
-        license="public-domain-us-gov",
-        notes="",
-    )
 
 
 @pytest.fixture(scope="module")

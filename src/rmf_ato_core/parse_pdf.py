@@ -609,7 +609,10 @@ def transcribe_impact_table(grid: list[list[str]]) -> str | None:
         # The label cell also carries the objective's statutory definition.
         definition = first[len(objective):].strip(" .:-")
         if definition:
-            lines.append(f"{objective} (definition): {re.sub(r'\\s+', ' ', definition)}")
+            # Collapsed outside the f-string: a backslash inside an f-string
+            # expression is a SyntaxError before Python 3.12.
+            collapsed = re.sub(r"\s+", " ", definition)
+            lines.append(f"{objective} (definition): {collapsed}")
         cells = [re.sub(r"\s+", " ", cell).strip() for cell in row[1:] if cell.strip()]
         for level, cell in zip(levels, cells):
             lines.append(f"{objective} / {level}: {cell}")

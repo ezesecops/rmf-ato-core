@@ -21,25 +21,7 @@ from rmf_ato_core.schema import (
     normalize_text,
     slugify,
 )
-
-
-def make_row(**overrides) -> Row:
-    base = dict(
-        id="SP-800-53r5/control/ac-2",
-        text="x" * 300,
-        doc_id="SP-800-53r5",
-        doc_title="Security and Privacy Controls for Information Systems and Organizations",
-        revision="Rev 5",
-        pub_date="2020-09",
-        tier=1,
-        chunk_type="control",
-        control_id="ac-2",
-        section_path="AC > AC-2",
-        source_url="https://example.invalid/catalog.json",
-        sha256_source="0" * 64,
-    )
-    base.update(overrides)
-    return Row(**base)
+from conftest import make_row
 
 
 # --- Row construction --------------------------------------------------------

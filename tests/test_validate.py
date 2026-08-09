@@ -16,7 +16,7 @@ from rmf_ato_core.validate import (
     summary_markdown,
     validate_rows,
 )
-from tests.test_schema import make_row
+from conftest import make_row
 
 MANIFEST = load_manifest(Path(__file__).resolve().parent.parent / "manifest.json")
 GOOD_SHA = "a" * 64

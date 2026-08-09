@@ -24,8 +24,11 @@ jobs:
       - name: Install
         run: pip install -e ".[dev]"
 
+      # `python -m pytest` rather than bare `pytest`: it puts the working
+      # directory on sys.path, which is how the src layout and the shared test
+      # helpers resolve without an editable-install side effect.
       - name: Run tests
-        run: pytest -q
+        run: python -m pytest -q
 
       - name: Verify the manifest is structurally valid
         run: python scripts/01_verify_manifest.py --no-network
